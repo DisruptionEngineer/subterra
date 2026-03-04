@@ -15,8 +15,19 @@ const clerkConfigured =
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
   !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("PLACEHOLDER");
 
+const authRedirectPaths = ["/", "/sign-in", "/sign-up"];
+
 export default clerkConfigured
   ? clerkMiddleware(async (auth, request) => {
+      const { userId } = await auth();
+
+      // Redirect authenticated users away from landing/auth pages to dashboard
+      if (userId && authRedirectPaths.some((p) => request.nextUrl.pathname === p ||
+          (p !== "/" && request.nextUrl.pathname.startsWith(p + "/")))) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+
+      // Protect non-public routes
       if (!isPublicRoute(request)) {
         await auth.protect();
       }
